@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Escanear · Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"></head><body><nav class="side" id="menu"></nav><main>
+
+<div class="eyebrow">CONTROL DE ACCESO</div><h1>Escanear código</h1><p class="sub">Apunta la cámara al QR de la credencial.</p>
+<div class="visor"><div id="lector"></div><div class="frame"><i></i><i></i><i></i><i></i><div class="laser"></div></div>
+<div class="hint"><i class="dot"></i>Centra el QR dentro del recuadro</div></div>
+<div class="acts"><button class="btn" id="sim">Simular lectura QR</button>
+<small>La cámara solo se usa durante el escaneo</small></div>
+<div class="result" id="resultado"></div>
+</main><script src="../assets/js/api.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+let bloqueado=false;
+function mostrar(d){
+  const clase=(d.ok||d.aviso)?"ok":"err";
+  const txt=d.ok?`Entrada registrada: ${d.nombre} a las ${d.hora}`
+    :d.aviso?`${d.nombre?d.nombre+": ":""}${d.aviso}${d.hora?" ("+d.hora+")":""}`:d.error;
+  resultado.innerHTML=`<div class="msg ${clase}">${esc(txt)}</div>`;
+}
+async function enviar(token){
+  if(bloqueado) return; bloqueado=true;
+  mostrar(await api("/api/asistencia",{method:"POST",body:{token}}));
+  setTimeout(()=>bloqueado=false,2500);
+}
+sim.onclick=async()=>{sim.disabled=true;mostrar(await api("/api/simular",{method:"POST"}));sim.disabled=false;};
+try {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    resultado.innerHTML = '<div class="msg err">Tu navegador no admite acceso a la cámara. Usa Chrome/Edge en Android o iPhone y permite permisos.</div>';
+    return;
+  }
+
+  if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+    resultado.innerHTML = '<div class="msg err">La cámara requiere un contexto seguro. En móvil, usa HTTPS o accede desde localhost; si no, usa la opción "Simular lectura QR".</div>';
+    return;
+  }
+
+  const lector = new Html5Qrcode("lector");
+  lector.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 260, height: 260 } }, enviar)
+    .catch((err) => {
+      console.error(err);
+      resultado.innerHTML = '<div class="msg err">No se pudo abrir la cámara. Acepta el permiso de cámara o usa "Simular lectura QR".</div>';
+    });
+} catch (e) {
+  console.error(e);
+  resultado.innerHTML = '<div class="msg err">No se pudo inicializar el escáner de cámara.</div>';
+}
+</script></body></html>

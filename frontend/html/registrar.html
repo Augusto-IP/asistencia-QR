@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Registrar · Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"></head><body><nav class="side" id="menu"></nav><main>
+
+<div class="eyebrow">ADMINISTRACIÓN</div><h1>Registrar una persona</h1>
+<p class="sub">Añade personal interno, empleados externos o contratistas y genera su QR de acceso.</p>
+<div class="reg">
+<div class="card"><div class="sec">Datos personales</div><p class="small" style="margin-bottom:20px">Información básica de identificación.</p>
+ <div class="fld"><label for="nombre">Nombre completo</label><input id="nombre" placeholder="Ej. Andrea Martínez" autocomplete="off"></div>
+ <div class="two"><div class="fld"><label for="email">Correo electrónico</label><input id="email" type="email" placeholder="nombre@empresa.com"></div>
+ <div class="fld"><label for="tipo">Tipo de persona</label><select id="tipo"><option value="interno">Personal interno</option><option value="externo">Empleado externo</option><option value="contratista">Contratista</option></select></div></div>
+ <hr class="hr"><div class="sec">Información laboral</div><p class="small" style="margin-bottom:20px">Ubicación de la persona dentro de la organización.</p>
+ <div class="two"><div class="fld"><label for="cargo">Cargo o función</label><input id="cargo" placeholder="Ej. Analista de operaciones"></div>
+ <div class="fld"><label for="depto">Departamento o área</label><input id="depto" placeholder="Ej. Operaciones"></div></div>
+ <div class="foot"><span>El código QR se generará automáticamente.</span><button class="btn" id="crear">Crear persona y QR</button></div>
+ <div id="aviso"></div></div>
+<div class="card cred"><div class="small">VISTA PREVIA</div><h3>Nueva credencial</h3>
+ <div class="box"><div class="qr" id="qr"></div><div class="av c0" id="av">NP</div>
+ <b id="pn">Nombre de la persona</b><p class="small" id="pc" style="margin-top:6px">Cargo o función</p>
+ <p class="small" id="pid" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">El ID se asignará al guardar</p></div>
+ <p class="small">✓ El QR será único y quedará vinculado al registro de asistencia.</p></div>
+</div>
+</main><script src="../assets/js/api.js"></script>
+<script>
+qr.innerHTML=svg("qr");
+function vista(){
+  const n=nombre.value.trim();
+  pn.textContent=n||"Nombre de la persona"; av.textContent=n?iniciales(n):"NP"; av.className="av "+(n?color(n):"c0");
+  pc.textContent=cargo.value.trim()||"Cargo o función";
+}
+[nombre,cargo].forEach(e=>e.oninput=vista);
+crear.onclick=async()=>{
+  if(!nombre.value.trim()||!email.value.trim()){aviso.innerHTML='<div class="msg err">Escribe el nombre y el correo para continuar.</div>';return;}
+  crear.disabled=true;
+  const d=await api("/api/personas",{method:"POST",body:{nombre:nombre.value,email:email.value,tipo:tipo.value,cargo:cargo.value,departamento:depto.value}});
+  crear.disabled=false;
+  if(d.error){aviso.innerHTML=`<div class="msg err">${esc(d.error)}</div>`;return;}
+  qr.innerHTML=`<img src="${d.qr}" alt="QR de ${esc(nombre.value)}">`;
+  pid.textContent="ID "+d.codigo;
+  aviso.innerHTML=`<div class="msg ok">Persona creada con el código ${esc(d.codigo)}. Puedes capturar o imprimir su QR.</div>`;
+  [nombre,email,cargo,depto].forEach(e=>e.value="");
+};
+</script></body></html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resumen · Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"></head><body><nav class="side" id="menu"></nav><main>
+
+<div class="top"><div><div class="eyebrow">PANEL ADMINISTRATIVO</div>
+<h1 id="saludo">Hola</h1><p class="sub" id="fecha"></p></div>
+<a class="btn" href="registrar.html">Registrar persona</a></div>
+<div class="grid3">
+ <div class="card stat"><div class="ico c0" data-i="users"></div><div><p>Personas registradas</p><b id="total">–</b><span>Personal activo</span></div></div>
+ <div class="card stat"><div class="ico c1" data-i="check"></div><div><p>Presentes hoy</p><b id="pres">–</b><span id="pct"></span></div></div>
+ <div class="card stat"><div class="ico c4" data-i="cal"></div><div><p>Pendientes</p><b id="pend">–</b><span>Sin entrada registrada</span></div></div>
+</div>
+<div class="grid2">
+ <div class="card"><div class="small">ASISTENCIA SEMANAL</div><h3>Actividad de accesos</h3><div class="bars" id="bars"></div></div>
+ <div class="card quick"><div class="small">ACCIONES</div><h3 style="margin-bottom:10px">Accesos rápidos</h3>
+  <a href="registrar.html"><div class="ico" data-i="plus"></div><div><b>Nueva persona</b><small>Crear perfil y credencial QR</small></div></a>
+  <a href="escanear.html"><div class="ico" data-i="cam"></div><div><b>Abrir escáner</b><small>Registrar una entrada</small></div></a>
+  <a href="personas.html"><div class="ico" data-i="users"></div><div><b>Ver personal</b><small>Consultar estados e historial</small></div></a>
+ </div></div>
+<div class="card"><div class="top"><div><div class="small">ÚLTIMOS MOVIMIENTOS</div><h3>Actividad reciente</h3></div>
+<a href="personas.html" style="font-weight:700;font-size:12px">Ver todas</a></div><div id="recientes" style="margin-top:14px"></div></div>
+</main><script src="../assets/js/api.js"></script>
+<script>
+const DIAS=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+const h=new Date().getHours();
+saludo.textContent=(h<12?"Buenos días":h<19?"Buenas tardes":"Buenas noches");
+fecha.textContent="Este es el estado de asistencia del equipo para hoy, "+new Date().toLocaleDateString("es",{day:"numeric",month:"long"})+".";
+document.querySelectorAll("[data-i]").forEach(e=>e.innerHTML=svg(e.dataset.i));
+(async()=>{
+  const d=await api("/api/resumen");
+  if(d.error){recientes.innerHTML=`<p class="empty">${esc(d.error)}</p>`;return;}
+  total.textContent=d.total; pres.textContent=d.presentes; pend.textContent=d.pendientes;
+  pct.textContent=(d.total?Math.round(d.presentes*100/d.total):0)+"% del equipo";
+  bars.innerHTML=d.semana.map(s=>`<div class="bar ${s.hoy?"hoy":""}"><span>${s.pct}%</span>
+    <div class="t"><div class="f" style="height:${Math.max(s.pct,4)}%"></div></div><span>${DIAS[s.dia]}</span></div>`).join("");
+  recientes.innerHTML=d.recientes.length?d.recientes.map(r=>`<div class="row">
+    <div class="av ${color(r.nombre)}">${esc(iniciales(r.nombre))}</div>
+    <div class="who"><b>${esc(r.nombre)}</b><small>${esc(r.area)}</small></div>
+    <span><i class="dot"></i>Entrada registrada</span><span class="mono">${r.hora}</span></div>`).join("")
+    :'<p class="empty">Aún no hay entradas hoy. Abre el escáner para registrar la primera.</p>';
+})();
+</script></body></html>

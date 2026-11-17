@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personas · Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"></head><body><nav class="side" id="menu"></nav><main>
+
+<div class="eyebrow">ASISTENCIA DE HOY</div><h1>Personas registradas</h1>
+<div class="tabs"><button class="on" id="tHoy">Hoy</button><button id="tAnio">Historial anual</button></div>
+<section id="vHoy">
+ <div class="card summary"><div><div class="small">HAN LLEGADO</div><b id="n">0<i>/0</i></b>
+ <p class="small" style="margin-top:10px"><i class="dot"></i><span id="np">0</span> presentes &nbsp; <span id="nd">0</span> pendientes</p></div>
+ <div class="ring" id="ring"><span id="rp">0%</span></div></div>
+ <input class="search" id="q" placeholder="Buscar por nombre o equipo">
+ <div class="chips"><button class="chip on" data-f="todas">Todas</button><button class="chip" data-f="presente">Presentes</button><button class="chip" data-f="pendiente">Pendientes</button></div>
+ <div class="card list" id="lista"></div>
+</section>
+<section id="vAnio" hidden><div class="card"><div class="small">HISTORIAL ANUAL</div><h3 id="tit"></h3>
+ <div class="year" id="anio"></div></div></section>
+<dialog id="dlg"><h3 id="dn"></h3><p class="mono" id="dc"></p><img id="di" alt="Código QR"><br><button class="btn" onclick="dlg.close()">Cerrar</button></dialog>
+</main><script src="../assets/js/api.js"></script>
+<script>
+let datos=[],filtro="todas";
+async function cargar(){
+  const r=await api("/api/personas?q="+encodeURIComponent(q.value));
+  if(r.error){lista.innerHTML=`<p class="empty">${esc(r.error)}</p>`;return;}
+  datos=r; pintar();
+}
+function pintar(){
+  const pres=datos.filter(p=>p.estado==="presente").length, pct=datos.length?Math.round(pres*100/datos.length):0;
+  n.innerHTML=`${pres}<i>/${datos.length}</i>`; np.textContent=pres; nd.textContent=datos.length-pres; rp.textContent=pct+"%";
+  ring.style.background=`conic-gradient(#2e9d5c ${pct}%, #dbe6dd 0)`;
+  const v=datos.filter(p=>filtro==="todas"||p.estado===filtro);
+  lista.innerHTML=v.length?v.map(p=>`<div class="row"><div class="av ${color(p.nombre)}">${esc(iniciales(p.nombre))}</div>
+   <div class="who"><b>${esc(p.nombre)}</b><small>${esc(p.cargo||p.departamento)} · ${esc(p.codigo)}</small></div>
+   <div class="right"><span class="tag ${p.estado==="presente"?"":"pend"}">${p.estado.toUpperCase()}</span><br>
+   <span class="mono">${p.hora_entrada||"--:--"}</span></div>
+   <button class="iconbtn" aria-label="Ver QR de ${esc(p.nombre)}" onclick="verQR(${p.id})">${svg("qr")}</button></div>`).join("")
+   :'<p class="empty">No hay personas que coincidan.</p>';
+}
+async function verQR(id){
+  const d=await api(`/api/personas/${id}/qr`); if(d.error) return alert(d.error);
+  dn.textContent=d.nombre; dc.textContent=d.codigo; di.src=d.qr; dlg.showModal();
+}
+let t; q.oninput=()=>{clearTimeout(t);t=setTimeout(cargar,250)};
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{
+  document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");filtro=c.dataset.f;pintar();});
+const M=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+async function anual(){
+  const d=await api("/api/historial"); if(d.error){anio.innerHTML=esc(d.error);return;}
+  tit.textContent="Asistencia promedio por mes, "+d.anio;
+  anio.innerHTML=d.meses.map(m=>`<div class="bar"><span>${m.pct}%</span><div class="t"><div class="f" style="height:${Math.max(m.pct,3)}%"></div></div><span>${M[m.mes-1]}</span></div>`).join("");
+}
+tHoy.onclick=()=>{tHoy.className="on";tAnio.className="";vHoy.hidden=false;vAnio.hidden=true;};
+tAnio.onclick=()=>{tAnio.className="on";tHoy.className="";vHoy.hidden=true;vAnio.hidden=false;anual();};
+cargar();
+</script></body></html>
